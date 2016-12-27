@@ -83,6 +83,8 @@ def download_pic(url, title):
         time.sleep(0.8)
         response = my_get(url)
     if response.status_code == 200:
+        if not os.path.exists("img"):
+            os.mkdir("img")
         if not os.path.exists("img/" + title):
             os.mkdir("img/" + title)
         with open("img/" + title + "/" + str(uuid.uuid1()) + ".jpg", 'wb') as fs:
