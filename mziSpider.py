@@ -50,7 +50,7 @@ def get_page_content(page):
 def get_pic(url):
     response = my_get(url)
     i = 0
-    while "400" in bs(response.content, "lxml").title:
+    while "400" in bs(response.content, "lxml").title or response.status_code == 404 or response.status_code == 400:
         i += 1
         if i > 5:
             return
@@ -58,16 +58,30 @@ def get_pic(url):
         response = my_get(url)
     li_soup = bs(response.content, "lxml")
     title = li_soup.title.text.replace(' ', '-')
-    total_page = int(li_soup.find(lambda tag: tag.name == 'a' and '下一页»' in tag.text) \
-                     .find_previous_sibling().text)
-    tasks = [gevent.spawn(download_pic, url + "/" + str(page), title, ) for page in range(1, total_page + 1)]
-    gevent.joinall(tasks)
+    if li_soup.find(lambda tag: tag.name == 'a' and '下一页»' in tag.text) is None:
+        with open("log.txt", "a") as fs:
+            fs.write(url + "\r\n")
+            fs.write(str(response.status_code) + "\r\n")
+            fs.write(response.content + "\r\n")
+        print "error" + url
+    else:
+        total_page = int(li_soup.find(lambda tag: tag.name == 'a' and '下一页»' in tag.text) \
+                         .find_previous_sibling().text)
+        tasks = [gevent.spawn(download_pic, url + "/" + str(page), title, ) for page in range(1, total_page + 1)]
+        gevent.joinall(tasks)
 
 
 def download_pic(url, title):
     response = my_get(url)
     href = bs(response.content, "lxml").select_one("div.main-image img").attrs["src"]
     response = my_get(href)
+    i = 0
+    while "400" in bs(response.content, "lxml").title or response.status_code == 404 or response.status_code == 400:
+        i += 1
+        if i > 5:
+            return
+        time.sleep(0.8)
+        response = my_get(url)
     if response.status_code == 200:
         if not os.path.exists("img/" + title):
             os.mkdir("img/" + title)
