@@ -10,7 +10,7 @@ import uuid
 import os
 import time
 
-gevent.monkey.patch_all()
+# gevent.monkey.patch_all()
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -76,20 +76,20 @@ def download_pic(url, title):
     href = bs(response.content, "lxml").select_one("div.main-image img").attrs["src"]
     response = my_get(href)
     i = 0
-    while "400" in bs(response.content, "lxml").title or response.status_code == 404 or response.status_code == 400:
+    while response.status_code != 200:
         i += 1
         if i > 5:
             return
         time.sleep(0.8)
         response = my_get(url)
-    if response.status_code == 200:
-        if not os.path.exists("img"):
-            os.mkdir("img")
-        if not os.path.exists("img/" + title):
-            os.mkdir("img/" + title)
-        with open("img/" + title + "/" + str(uuid.uuid1()) + ".jpg", 'wb') as fs:
-            fs.write(response.content)
-            print "download success!:" + title
+
+    if not os.path.exists("img"):
+        os.mkdir("img")
+    if not os.path.exists("img/" + title):
+        os.mkdir("img/" + title)
+    with open("img/" + title + "/" + str(uuid.uuid1()) + ".jpg", 'wb') as fs:
+        fs.write(response.content)
+        print "download success!:" + title
 
 
 if __name__ == "__main__":
