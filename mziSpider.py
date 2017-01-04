@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup as bs
 import uuid
 import os
 import time
+from multiprocessing import Process
 
 # gevent.monkey.patch_all()
 reload(sys)
@@ -31,23 +32,29 @@ def my_get(url):
     return session.get(url)
 
 
-def main():
-    start_url = "http://www.mzitu.com/xinggan"
-    soup = bs(my_get(start_url).content, "lxml")
+def get_type_content(url, mm_type):
+    soup = bs(my_get(url).content, "lxml")
     total_page = int(soup.select_one("a.next.page-numbers").find_previous_sibling().text)
     for page in range(1, total_page + 1):
-        get_page_content(page)
+        get_page_content(page, mm_type)
 
 
-def get_page_content(page):
+def main():
+    types = ['xinggan', 'japan', 'taiwan', 'mm']
+    tasks = [Process(target=get_type_content, args=('http://www.mzitu.com/' + x, x,)) for x in types]
+    for task in tasks:
+        task.start()
+
+
+def get_page_content(page, mm_type):
     href = "http://www.mzitu.com/xinggan/page/" + str(page)
     soup = bs(my_get(href).content, "lxml")
     li_list = soup.select("div.postlist ul#pins li")
     for li in li_list:
-        get_pic(li.select_one("a").attrs["href"])
+        get_pic(li.select_one("a").attrs["href"], mm_type)
 
 
-def get_pic(url):
+def get_pic(url, mm_type):
     response = my_get(url)
     i = 0
     while "400" in bs(response.content, "lxml").title or response.status_code == 404 or response.status_code == 400:
@@ -67,11 +74,12 @@ def get_pic(url):
     else:
         total_page = int(li_soup.find(lambda tag: tag.name == 'a' and '下一页»' in tag.text) \
                          .find_previous_sibling().text)
-        tasks = [gevent.spawn(download_pic, url + "/" + str(page), title, ) for page in range(1, total_page + 1)]
+        tasks = [gevent.spawn(download_pic, url + "/" + str(page), title, mm_type, ) for page in
+                 range(1, total_page + 1)]
         gevent.joinall(tasks)
 
 
-def download_pic(url, title):
+def download_pic(url, title, mm_type):
     response = my_get(url)
     href = bs(response.content, "lxml").select_one("div.main-image img").attrs["src"]
     response = my_get(href)
@@ -85,9 +93,11 @@ def download_pic(url, title):
 
     if not os.path.exists("img"):
         os.mkdir("img")
-    if not os.path.exists("img/" + title):
-        os.mkdir("img/" + title)
-    with open("img/" + title + "/" + str(uuid.uuid1()) + ".jpg", 'wb') as fs:
+    if not os.path.exists("img/" + mm_type):
+        os.mkdir("img/" + mm_type)
+    if not os.path.exists("img/" + mm_type + "/" + title):
+        os.mkdir("img/" + mm_type + "/" + title)
+    with open("img/" + mm_type + "/" + title + "/" + str(uuid.uuid1()) + ".jpg", 'wb') as fs:
         fs.write(response.content)
         print "download success!:" + title
 
