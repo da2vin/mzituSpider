@@ -11,7 +11,7 @@ import os
 import time
 from multiprocessing import Process
 
-# gevent.monkey.patch_all()
+gevent.monkey.patch_all()
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
