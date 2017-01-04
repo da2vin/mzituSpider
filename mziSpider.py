@@ -40,7 +40,8 @@ def get_type_content(url, mm_type):
 
 
 def main():
-    types = ['xinggan', 'japan', 'taiwan', 'mm']
+    # types = ['xinggan', 'japan', 'taiwan', 'mm']
+    types = ['mm', ]
     tasks = [Process(target=get_type_content, args=('http://www.mzitu.com/' + x, x,)) for x in types]
     for task in tasks:
         task.start()
