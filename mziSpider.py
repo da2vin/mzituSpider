@@ -48,7 +48,7 @@ def main():
 
 
 def get_page_content(page, mm_type):
-    href = "http://www.mzitu.com/xinggan/page/" + str(page)
+    href = "http://www.mzitu.com/" + mm_type + "/page/" + str(page)
     soup = bs(my_get(href).content, "lxml")
     li_list = soup.select("div.postlist ul#pins li")
     for li in li_list:
