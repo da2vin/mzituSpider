@@ -3,15 +3,15 @@
 import sys
 import requests
 from requests.adapters import HTTPAdapter
-import gevent
-import gevent.monkey
+# import gevent
+# import gevent.monkey
 from bs4 import BeautifulSoup as bs
 import uuid
 import os
 import time
 from multiprocessing import Process
 
-gevent.monkey.patch_all()
+# gevent.monkey.patch_all()
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -21,12 +21,15 @@ headers[
 headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
 headers["Accept-Encoding"] = "gzip, deflate, sdch"
 headers["Accept-Language"] = "zh-CN,zh;q=0.8"
+headers["Accept-Language"] = "zh-CN,zh;q=0.8"
 request_retry = HTTPAdapter(max_retries=3)
 
 
-def my_get(url):
+def my_get(url, refer=None):
     session = requests.session()
     session.headers = headers
+    if refer:
+        headers["Referer"] = refer
     session.mount('https://', request_retry)
     session.mount('http://', request_retry)
     return session.get(url)
@@ -56,6 +59,7 @@ def get_page_content(page, mm_type):
 
 
 def get_pic(url, mm_type):
+    refer = url
     response = my_get(url)
     i = 0
     while "400" in bs(response.content, "lxml").title or response.status_code == 404 or response.status_code == 400:
@@ -75,13 +79,16 @@ def get_pic(url, mm_type):
     else:
         total_page = int(li_soup.find(lambda tag: tag.name == 'a' and '下一页»' in tag.text) \
                          .find_previous_sibling().text)
-        tasks = [gevent.spawn(download_pic, url + "/" + str(page), title, mm_type, ) for page in
-                 range(1, total_page + 1)]
-        gevent.joinall(tasks)
+        for page in range(1, total_page + 1):
+            download_pic(url + "/" + str(page), title, mm_type, refer)
+            time.sleep(0.8)
+        # tasks = [gevent.spawn(download_pic, url + "/" + str(page), title, mm_type, refer) for page in
+        #          range(1, total_page + 1)]
+        # gevent.joinall(tasks)
 
 
-def download_pic(url, title, mm_type):
-    response = my_get(url)
+def download_pic(url, title, mm_type, refer):
+    response = my_get(url, refer)
     href = bs(response.content, "lxml").select_one("div.main-image img").attrs["src"]
     response = my_get(href)
     i = 0
